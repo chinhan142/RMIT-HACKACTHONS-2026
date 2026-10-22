@@ -1,0 +1,57 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { authenticate, hasRole } from '../../../../../lib/server/sim-auth'
+import { createEvidence, getCase, getEvidence, getQeaState, resetEvidence } from '../../../../../lib/server/sim-db'
+
+export const runtime = 'nodejs'
+type Context = { params: Promise<{ id: string }> }
+
+export async function GET(request: NextRequest, context: Context) {
+  const auth = await authenticate(request)
+  if (auth.error) return auth.error
+  const { id } = await context.params
+  if (!getCase(id)) return NextResponse.json({ error: 'Unknown case / exam' }, { status: 404 })
+  const evidence = getEvidence(id)
+  if (!evidence) return NextResponse.json({ error: 'Bảng điểm chưa được niêm phong (Grade evidence not sealed yet)' }, { status: 404 })
+  const decryptRole = `_tide_${id.replaceAll('-', '')}.selfdecrypt`
+  if (!hasRole(auth.principal, decryptRole)) {
+    const qea = getQeaState(id)
+    return NextResponse.json(
+      {
+        error: `Từ chối truy cập (403 Forbidden): Tài khoản thiếu quyền '${decryptRole}'. Trạng thái QEA Quorum hiện tại: ${qea.approvals.length}/${qea.threshold} (${qea.status}). Cần đủ ít nhất 2/3 thành viên Hội đồng phê duyệt!`,
+      },
+      { status: 403 }
+    )
+  }
+  return NextResponse.json({ ciphertext: evidence.ciphertext, tags: [id.replaceAll('-', '')], createdAt: evidence.created_at })
+}
+
+export async function PUT(request: NextRequest, context: Context) {
+  const auth = await authenticate(request)
+  if (auth.error) return auth.error
+  const { id } = await context.params
+  if (!getCase(id)) return NextResponse.json({ error: 'Unknown case / exam' }, { status: 404 })
+  if (!hasRole(auth.principal, `_tide_${id.replaceAll('-', '')}.selfencrypt`)) {
+    return NextResponse.json({ error: 'Tide encrypt role (_tide_case001.selfencrypt) required to seal grade' }, { status: 403 })
+  }
+  if (getEvidence(id)) return NextResponse.json({ error: 'Already sealed' }, { status: 409 })
+  let body: unknown
+  try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+  const ciphertext = body && typeof body === 'object' ? (body as Record<string, unknown>).ciphertext : undefined
+  if (typeof ciphertext !== 'string' || ciphertext.length < 16 || ciphertext.length > 200_000) {
+    return NextResponse.json({ error: 'Invalid ciphertext' }, { status: 400 })
+  }
+  try {
+    createEvidence(id, auth.principal.sub, ciphertext)
+  } catch {
+    return NextResponse.json({ error: 'Grade record already sealed' }, { status: 409 })
+  }
+  return NextResponse.json({ sealed: true }, { status: 201 })
+}
+
+export async function DELETE(request: NextRequest, context: Context) {
+  const auth = await authenticate(request)
+  if (auth.error) return auth.error
+  const { id } = await context.params
+  resetEvidence(id)
+  return NextResponse.json({ reset: true })
+}

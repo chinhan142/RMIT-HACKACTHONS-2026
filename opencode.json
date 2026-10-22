@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "tide": {
+      "type": "remote",
+      "url": "https://mcp.tide.org/mcp",
+      "enabled": true
+    }
+  }
+}
