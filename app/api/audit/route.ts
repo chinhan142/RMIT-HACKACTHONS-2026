@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (action === 'tamper') {
     try {
       const result = tamperEvidence(caseId)
-      return NextResponse.json({ message: 'Dữ liệu ciphertext trong SQLite đã bị can thiệp trái phép!', ...result })
+      return NextResponse.json({ message: 'Ciphertext payload in SQLite was maliciously modified by simulated attacker!', ...result })
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : 'Tamper failed' }, { status: 400 })
     }
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   if (action === 'reset') {
     resetEvidence(caseId)
-    return NextResponse.json({ message: 'Đã xóa dữ liệu điểm thi để chạy lại demo!' })
+    return NextResponse.json({ message: 'Demo state and QEA Quorum reset successfully!' })
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })

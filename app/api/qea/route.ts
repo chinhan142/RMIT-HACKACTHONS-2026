@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
   if (!hasRole(auth.principal, 'tide-realm-admin')) {
     return NextResponse.json(
-      { error: '403 Forbidden: Chỉ thành viên Hội đồng Khảo thí (role: tide-realm-admin) mới có quyền ký duyệt QEA!' },
+      { error: '403 Forbidden: Only Examination Board Administrators (role: tide-realm-admin) can sign QEA Change Requests!' },
       { status: 403 }
     )
   }
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (result.alreadyApproved) {
     return NextResponse.json(
       {
-        error: `Chính sách Four-Eyes (Độc lập Đa bên): Tài khoản '${auth.principal.name}' đã ký duyệt yêu cầu này rồi! Vui lòng chuyển sang thành viên Hội đồng khác (ví dụ reviewer-b hoặc reviewer-c) để đạt Quorum 2/3.`,
+        error: `Four-Eyes Policy Conflict (409): '${auth.principal.name}' has already signed this Change Request! Please switch to an independent Board Member (e.g., reviewer-b or reviewer-c) to reach 2/3 Quorum.`,
         qea: result.state,
       },
       { status: 409 }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     qea: result.state,
     message:
       result.state.status === 'COMMITTED'
-        ? `🎉 ĐÃ ĐẠT QUORUM ${result.state.approvals.length}/${result.state.threshold} (N=3)! Hệ thống QEA đã tự động Commit và cấp quyền '_tide_case001.selfdecrypt' cho tài khoản Custodian!`
-        : `✍️ Đã ghi nhận chữ ký Enclave của '${auth.principal.name}' (${result.state.approvals.length}/${result.state.threshold} — Trạng thái: PENDING). Cần thêm 1 chữ ký độc lập nữa từ thành viên Hội đồng khác để mở khóa!`,
+        ? `🎉 QUORUM REACHED (${result.state.approvals.length}/${result.state.threshold}, N=3)! Tide QEA automatically committed the Change Request and granted '_tide_case001.selfdecrypt' to the Custodian!`
+        : `✍️ Enclave signature recorded for '${auth.principal.name}' (${result.state.approvals.length}/${result.state.threshold} — Status: PENDING). 1 more independent Board Member signature is required to unlock decryption!`,
   })
 }

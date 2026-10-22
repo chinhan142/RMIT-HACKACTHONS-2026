@@ -18,25 +18,25 @@ type AuthResult = { principal: Principal; error?: never } | { principal?: never;
 const SIMULATED_ACTORS: Record<string, { sub: string; name: string; baseRoles: string[]; jkt: string }> = {
   'custodian-demo': {
     sub: '14f791c7f7a62339394694d22428e956f3bad77f42aec4c2bc1a8172dc171983',
-    name: 'custodian-demo',
+    name: 'custodian-demo (Lecturer / Student)',
     baseRoles: ['_tide_case001.selfencrypt', 'appUser', 'offline_access'],
     jkt: 'dpop_jkt_es256_custodian_9f8e7d6c5b4a',
   },
   'admin-a': {
     sub: '04ef7d69-ad81-43ef-ae0a-a762da5a1787',
-    name: 'admin-a (Ủy viên 1)',
+    name: 'admin-a (Exam Board Member 1/3)',
     baseRoles: ['tide-realm-admin', '_tide_case001.selfencrypt', 'appUser', 'offline_access'],
     jkt: 'dpop_jkt_es256_adminA_1a2b3c4d5e6f',
   },
   'reviewer-b': {
     sub: '4ce912bc-45e2-490b-856d-432dabe9e700',
-    name: 'reviewer-b (Ủy viên 2)',
+    name: 'reviewer-b (Dean of School 2/3)',
     baseRoles: ['tide-realm-admin', 'appUser', 'offline_access'],
     jkt: 'dpop_jkt_es256_reviewerB_7a8b9c0d1e2f',
   },
   'reviewer-c': {
     sub: '3094ff7c-55fe-4368-a3f1-e493cbc76133',
-    name: 'reviewer-c (Ủy viên 3)',
+    name: 'reviewer-c (Academic Auditor 3/3)',
     baseRoles: ['tide-realm-admin', 'appUser', 'offline_access'],
     jkt: 'dpop_jkt_es256_reviewerC_3f4e5d6c7b8a',
   },

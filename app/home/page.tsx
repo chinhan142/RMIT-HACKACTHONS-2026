@@ -67,10 +67,10 @@ const ENCRYPT_ROLE = `_tide_${TAG}.selfencrypt`
 const DECRYPT_ROLE = `_tide_${TAG}.selfdecrypt`
 
 const ACTORS = [
-  { id: 'custodian-demo', label: '🎓 custodian-demo (Giảng viên/SV)', badge: 'CUSTODIAN' },
-  { id: 'admin-a', label: '🏛️ admin-a (Ủy viên 1/3)', badge: 'ADMIN 1/3' },
-  { id: 'reviewer-b', label: '🏛️ reviewer-b (Trưởng khoa 2/3)', badge: 'ADMIN 2/3' },
-  { id: 'reviewer-c', label: '🏛️ reviewer-c (Thanh tra 3/3)', badge: 'ADMIN 3/3' },
+  { id: 'custodian-demo', label: '🎓 custodian-demo (Lecturer/Student)', badge: 'CUSTODIAN' },
+  { id: 'admin-a', label: '🏛️ admin-a (Board Member 1/3)', badge: 'ADMIN 1/3' },
+  { id: 'reviewer-b', label: '🏛️ reviewer-b (Dean of School 2/3)', badge: 'ADMIN 2/3' },
+  { id: 'reviewer-c', label: '🏛️ reviewer-c (Auditor 3/3)', badge: 'ADMIN 3/3' },
 ]
 
 const DEFAULT_GRADE_PAYLOAD = JSON.stringify(
@@ -89,7 +89,7 @@ const DEFAULT_GRADE_PAYLOAD = JSON.stringify(
     },
     finalScore: 9.4,
     letterGrade: 'HD (High Distinction)',
-    examinerNote: 'Xuất sắc! Sinh viên hoàn thành trọn vẹn mô hình bảo mật E2EE và cơ chế QEA Quorum 2/3.',
+    examinerNote: 'Outstanding work! Verified end-to-end encryption and 2-of-3 QEA Quorum governance.',
     sealedTimestamp: new Date().toISOString(),
   },
   null,
@@ -117,16 +117,16 @@ async function browserEncryptE2ee(plaintext: string, tag: string): Promise<strin
 
 async function browserDecryptE2ee(packet: string, tag: string): Promise<string> {
   if (!packet.startsWith(`TIDE_E2EE_V1.${tag}.`)) {
-    throw new Error('🚨 CẢNH BÁO AN NINH MẬT MÃ: Định dạng gói tin Ciphertext không hợp lệ hoặc đã bị can thiệp!')
+    throw new Error('🚨 CRYPTOGRAPHIC INTEGRITY ALERT: Invalid or tampered Tide E2EE packet header!')
   }
   const parts = packet.split('.')
   if (parts.length !== 4) {
-    throw new Error('🚨 CẢNH BÁO AN NINH MẬT MÃ: Cấu trúc Ciphertext đã bị phá hủy!')
+    throw new Error('🚨 CRYPTOGRAPHIC INTEGRITY ALERT: Ciphertext structure was corrupted!')
   }
   const [, , ivHex, cipherB64] = parts
   const ivMatch = ivHex.match(/.{1,2}/g)
   if (!ivMatch || ivMatch.length !== 12) {
-    throw new Error('🚨 CẢNH BÁO AN NINH MẬT MÃ: Vector khởi tạo (IV) không hợp lệ!')
+    throw new Error('🚨 CRYPTOGRAPHIC INTEGRITY ALERT: Invalid Initialization Vector (IV)!')
   }
   const iv = new Uint8Array(ivMatch.map((byte) => parseInt(byte, 16)))
   let rawBytes: Uint8Array
@@ -136,7 +136,7 @@ async function browserDecryptE2ee(packet: string, tag: string): Promise<string> 
     for (let i = 0; i < bin.length; i++) rawBytes[i] = bin.charCodeAt(i)
   } catch {
     throw new Error(
-      '🚨 PHÁT HIỆN GIẢ MẠO DỮ LIỆU (Base64 Corrupted): Ciphertext trong SQLite đã bị Hacker/DBA sửa đổi trái phép!'
+      '🚨 TAMPERING DETECTED (Corrupted Base64 Payload): The ciphertext in SQLite was modified by an unauthorized party!'
     )
   }
   try {
@@ -145,7 +145,7 @@ async function browserDecryptE2ee(packet: string, tag: string): Promise<string> 
     return new TextDecoder().decode(plainBuf)
   } catch {
     throw new Error(
-      '🚨 PHÁT HIỆN GIẢ MẠO MẬT MÃ (AEAD AES-GCM Authentication Tag Mismatch): Dữ liệu điểm thi trong SQLite đã bị Hacker/DBA can thiệp trái phép! Tide E2EE từ chối giải mã dữ liệu bẩn!'
+      '🚨 CRYPTOGRAPHIC TAMPERING DETECTED (AEAD AES-GCM Tag Mismatch): The grade record in SQLite was altered by a Hacker/DBA! Tide E2EE refused to decrypt forged data!'
     )
   }
 }
@@ -157,7 +157,6 @@ export default function HomePage() {
   const router = useRouter()
   const {
     authenticated,
-    isInitializing,
     token,
     secureFetch,
     doEncrypt,
@@ -185,7 +184,7 @@ export default function HomePage() {
   const [qeaState, setQeaState] = useState<QeaState | null>(null)
   const [principal, setPrincipal] = useState<PrincipalState | null>(null)
   const [purpose, setPurpose] = useState(
-    'Đơn xin phúc khảo điểm thi Final Exam môn COSC2759. Đề nghị Hội đồng Khảo thí chấm lại câu 3 phần thiết kế giao thức phân tán.'
+    'Official grade appeal and review request for COSC2759 Final Exam (Question 3 — Distributed Consensus Protocol). Requesting Examination Board authorization to unseal grade record.'
   )
   const [draft, setDraft] = useState(DEFAULT_GRADE_PAYLOAD)
   const [plaintext, setPlaintext] = useState('')
@@ -242,7 +241,7 @@ export default function HomePage() {
         setQeaState(qeaData.qea as QeaState)
         setPrincipal(qeaData.principal as PrincipalState)
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : 'Không tải được dữ liệu')
+        setMessage(error instanceof Error ? error.message : 'Failed to load data')
       } finally {
         setLoading(false)
       }
@@ -255,7 +254,7 @@ export default function HomePage() {
       const data = await api('/api/audit')
       setRawDb(data as RawDbState)
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Không tải được cơ sở dữ liệu raw')
+      setMessage(error instanceof Error ? error.message : 'Failed to fetch raw SQLite state')
     }
   }, [api])
 
@@ -274,7 +273,7 @@ export default function HomePage() {
   const switchActor = async (newActorId: string) => {
     setSimActor(newActorId)
     localStorage.setItem('tide_sim_actor', newActorId)
-    setMessage(`🔄 Đã chuyển phiên làm việc TideCloak sang danh tính: ${newActorId} (DPoP & Role Claims đã cập nhật)`)
+    setMessage(`🔄 Switched active TideCloak session to '${newActorId}' (DPoP proof & role claims updated)`)
     await refresh(newActorId)
   }
 
@@ -308,10 +307,10 @@ export default function HomePage() {
       })
       setPlaintext('')
       setCiphertext(encrypted)
-      setMessage('✅ Bảng điểm đã được mã hóa E2EE trực tiếp trên trình duyệt của giảng viên và niêm phong vào SQLite!')
+      setMessage('✅ Grade record encrypted client-side in the browser and sealed in SQLite (Zero-Knowledge Server)!')
       await refresh()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Niêm phong thất bại')
+      setMessage(error instanceof Error ? error.message : 'Failed to seal grade record')
     } finally {
       setBusy(false)
     }
@@ -326,16 +325,16 @@ export default function HomePage() {
       const record = await api(`/api/cases/${CASE_ID}/evidence`)
       setCiphertext(record.ciphertext)
       let decryptedText: string
-      if ( String(record.ciphertext).startsWith(`TIDE_E2EE_V1.${TAG}.`) ) {
+      if (String(record.ciphertext).startsWith(`TIDE_E2EE_V1.${TAG}.`)) {
         decryptedText = await browserDecryptE2ee(record.ciphertext, TAG)
       } else {
         const [decrypted] = await doDecrypt([{ encrypted: record.ciphertext, tags: record.tags }])
         decryptedText = String(decrypted)
       }
       setPlaintext(decryptedText)
-      setMessage('🎉 Giải mã thành công ngay trên trình duyệt! Tide Protocol đã xác thực quyền _tide_case001.selfdecrypt sau khi đạt 2/3 Quorum.')
+      setMessage('🎉 Client-side decryption succeeded! Tide Protocol verified role _tide_case001.selfdecrypt granted via 2/3 QEA Quorum.')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Truy cập bị từ chối! Bảng điểm đang bị khóa hoặc chưa có Quorum.')
+      setMessage(error instanceof Error ? error.message : 'Access Denied! Grade record is locked or awaiting 2/3 Quorum.')
     } finally {
       setBusy(false)
     }
@@ -350,10 +349,10 @@ export default function HomePage() {
         method: 'POST',
         body: JSON.stringify({ caseId: CASE_ID, purpose }),
       })
-      setMessage('📋 Đã gửi đơn phúc khảo lên Hội đồng Khảo thí. QEA sẽ chặn quyền giải mã/sửa điểm cho đến khi đủ ít nhất 2/3 Quorum.')
+      setMessage('📋 Appeal request submitted to the Examination Board. Tide QEA blocks decryption until at least 2 of 3 Board Members approve.')
       await refresh()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Gửi đơn phúc khảo thất bại')
+      setMessage(error instanceof Error ? error.message : 'Failed to submit appeal request')
     } finally {
       setBusy(false)
     }
@@ -379,7 +378,7 @@ export default function HomePage() {
       setMessage(res.message)
       await refresh(actorOverride)
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Ký duyệt QEA thất bại')
+      setMessage(error instanceof Error ? error.message : 'QEA Enclave approval failed')
     } finally {
       setBusy(false)
     }
@@ -395,10 +394,10 @@ export default function HomePage() {
         body: JSON.stringify({ action: 'tamper', caseId: CASE_ID }),
       })
       setPlaintext('')
-      setMessage(`⚠️ ĐÃ GIẢ LẬP TẤN CÔNG: ${res.message} Hãy quay lại Tab 1 và bấm "Giải Mã Điểm Thi" để kiểm tra tính toàn vẹn mật mã!`)
+      setMessage(`⚠️ SIMULATED ATTACK: ${res.message} Return to Tab 1 and click "Decrypt Exam Grade" to verify cryptographic tamper detection!`)
       await fetchRawDb()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Giả lập tấn công thất bại')
+      setMessage(error instanceof Error ? error.message : 'Simulated attack failed')
     } finally {
       setBusy(false)
     }
@@ -412,11 +411,11 @@ export default function HomePage() {
     setCiphertext('')
     try {
       await api(`/api/cases/${CASE_ID}/evidence`, { method: 'DELETE' })
-      setMessage('🔄 Đã làm mới toàn bộ trạng thái Bảng điểm & QEA Quorum (0/2)! Bạn có thể bắt đầu quay lại từ đầu.')
+      setMessage('🔄 Demo state & QEA Quorum reset to 0/2! Ready for a fresh walkthrough.')
       await refresh()
       if (activeTab === 'auditor') await fetchRawDb()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Reset thất bại')
+      setMessage(error instanceof Error ? error.message : 'Reset failed')
     } finally {
       setBusy(false)
     }
@@ -442,9 +441,9 @@ export default function HomePage() {
           <span className="live-dot" />
           <span>{name}</span>
           {isAdmin ? (
-            <span className="status ok">HỘI ĐỒNG (tide-realm-admin)</span>
+            <span className="status ok">EXAM BOARD (tide-realm-admin)</span>
           ) : (
-            <span className="status locked">CUSTODIAN (ENCRYPT-ONLY)</span>
+            <span className="status locked">CUSTODIAN</span>
           )}
           <div className="divider" />
           <button className="text-button" onClick={() => void resetDemo()}>
@@ -452,7 +451,7 @@ export default function HomePage() {
           </button>
           <div className="divider" />
           <button className="text-button" onClick={handleLogout}>
-            Đăng xuất
+            Sign Out
           </button>
         </div>
       </header>
@@ -474,10 +473,10 @@ export default function HomePage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <span className="eyebrow" style={{ fontSize: '10px' }}>
-            ⚡ TIDECLOAK SESSION & DPoP IDENTITY SWITCHER (CHUYỂN NHANH VAI TRÒ DEMO):
+            ⚡ TIDECLOAK SESSION & DPoP IDENTITY SWITCHER (INSTANT ROLE SWITCHING):
           </span>
           <span style={{ fontSize: '11px', color: 'var(--muted)', fontFamily: 'monospace' }}>
-            VUID: {principal?.sub.slice(0, 24)}… | DPoP cnf.jkt: {principal?.dpopThumbprint || 'verified'} | Roles:{' '}
+            VUID: {principal?.sub.slice(0, 24)}… | DPoP cnf.jkt: {principal?.dpopThumbprint || 'verified'} | Active Roles:{' '}
             <strong style={{ color: 'var(--lime)' }}>{activeRoles.join(', ')}</strong>
           </span>
         </div>
@@ -508,12 +507,12 @@ export default function HomePage() {
       <section className="hero">
         <div className="eyebrow">RMIT HACKATHON 2026 · TIDE UNLOCKED CHALLENGE</div>
         <h1>
-          Hệ Thống Khóa Điểm Thi<br />
-          <em>Bất Khả Xâm Phạm.</em>
+          Cryptographic Exam Grade<br />
+          <em>Custody & Quorum Vault.</em>
         </h1>
         <p>
-          Mã hoá E2EE đầu cuối từ trình duyệt giảng viên, máy chủ hoàn toàn Zero-Knowledge, và cơ chế
-          Hội đồng Khảo thí Quorum (QEA 2/3) ngăn chặn tuyệt đối mọi hành vi can thiệp hay sửa điểm từ Hacker, DBA và Admin đơn lẻ.
+          End-to-end encrypted in the lecturer’s browser, stored as opaque ciphertext on a zero-knowledge SQLite server,
+          and governed by a 2-of-3 Examination Board Quorum (Tide QEA) to prevent unilateral grade tampering.
         </p>
       </section>
 
@@ -523,45 +522,45 @@ export default function HomePage() {
           className={`tab-btn ${activeTab === 'portal' ? 'active' : ''}`}
           onClick={() => setActiveTab('portal')}
         >
-          🎓 1. Cổng Giảng Viên & Sinh Viên (E2EE)
+          🎓 1. Lecturer & Student Portal (Client-Side E2EE)
         </button>
         <button
           className={`tab-btn ${activeTab === 'quorum' ? 'active' : ''}`}
           onClick={() => setActiveTab('quorum')}
         >
-          🏛️ 2. Hội Đồng Khảo Thí & Quorum QEA ({qeaState?.approvals.length || 0}/{qeaState?.threshold || 2})
+          🏛️ 2. Exam Board QEA Quorum ({qeaState?.approvals.length || 0}/{qeaState?.threshold || 2} Approved)
         </button>
         <button
           className={`tab-btn ${activeTab === 'auditor' ? 'active' : ''}`}
           onClick={() => setActiveTab('auditor')}
         >
-          🛡️ 3. Giả Lập Tấn Công (Live Hack Proof)
+          🛡️ 3. Live Attack Sandbox (Zero-Knowledge & Tamper Proof)
         </button>
       </nav>
 
       {message && <div className="feedback">{message}</div>}
 
-      {/* TAB 1: Giảng viên & Sinh viên */}
+      {/* TAB 1: Lecturer & Student Portal */}
       {activeTab === 'portal' && (
         <div className="layout-grid">
-          {/* Panel Trái: Giảng viên niêm phong */}
+          {/* Left Panel: Lecturer Seals Grade */}
           <section className="panel">
             <div className="panel-head">
-              <span>01 — GIẢNG VIÊN CHẤM & KHÓA ĐIỂM</span>
+              <span>01 — LECTURER: ENCRYPT & SEAL GRADE</span>
               <span className={`status ${caseRecord?.sealed ? 'ok' : 'locked'}`}>
-                {caseRecord?.sealed ? 'Đã Niêm Phong E2EE' : 'Chưa Khóa Điểm'}
+                {caseRecord?.sealed ? 'Sealed (E2EE)' : 'Unsealed'}
               </span>
             </div>
 
             <h2>COSC2759 — Distributed Systems</h2>
             <p className="muted small">
-              Sinh viên: <strong>s3912345 · Hoang Nguyen</strong>
+              Student: <strong>s3912345 · Hoang Nguyen</strong>
               <br />
-              Học kỳ: <strong>Semester 2026B (RMIT Vietnam)</strong>
+              Term: <strong>Semester 2026B (RMIT Vietnam)</strong>
             </p>
 
             <div className="action-block">
-              <h3>Dữ liệu Bảng điểm (Mã hóa E2EE trên trình duyệt trước khi gửi lên server):</h3>
+              <h3>Grade Record Payload (Encrypted in Browser Before Leaving Client):</h3>
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -573,36 +572,37 @@ export default function HomePage() {
                 onClick={() => void sealEvidence()}
                 disabled={!canEncrypt || Boolean(caseRecord?.sealed) || busy || loading}
               >
-                {busy ? 'Đang mã hóa trên trình duyệt…' : '🔒 Mã Hóa E2EE & Niêm Phong Bảng Điểm'}
+                {busy ? 'Encrypting in Browser…' : '🔒 Client-Side E2EE Encrypt & Seal Grade Record'}
               </button>
             </div>
 
             <div className="role-line">
-              <span>QUYỀN TIDE TRÊN PHIÊN HIỆN TẠI</span>
+              <span>REQUIRED TIDE ENCRYPTION ROLE</span>
               <code>{ENCRYPT_ROLE}</code>
               <span className="hint">
                 {canEncrypt
-                  ? '✔ Tài khoản có quyền _tide_case001.selfencrypt để mã hóa và niêm phong điểm.'
-                  : '✖ Tài khoản hiện tại không có quyền encrypt. Hãy chọn custodian-demo ở thanh trên.'}
+                  ? '✔ Session holds _tide_case001.selfencrypt to seal grade records.'
+                  : '✖ Current actor lacks encrypt role. Switch to custodian-demo above.'}
               </span>
             </div>
           </section>
 
-          {/* Panel Phải: Sinh viên tra cứu & Giải mã */}
+          {/* Right Panel: Student / Custodian Decrypts */}
           <section className="panel">
             <div className="panel-head">
-              <span>02 — SINH VIÊN / CUSTODIAN TRA CỨU & GIẢI MÃ</span>
+              <span>02 — CUSTODIAN / STUDENT: VERIFY & DECRYPT</span>
               <span className={`status ${canDecrypt ? 'ok' : 'locked'}`}>
                 {canDecrypt
-                  ? `Quorum ${qeaState?.approvals.length || 2}/2: ĐÃ MỞ KHÓA`
-                  : `Quorum ${qeaState?.approvals.length || 0}/2: ĐANG KHÓA (403)`}
+                  ? `Quorum ${qeaState?.approvals.length || 2}/2: UNLOCKED`
+                  : `Quorum ${qeaState?.approvals.length || 0}/2: LOCKED (403)`}
               </span>
             </div>
 
-            <h2>Bảng Điểm Cá Nhân</h2>
+            <h2>Official Grade Transcript</h2>
             <p className="muted small">
-              Máy chủ và SQLite chỉ lưu Ciphertext. API <code>GET /api/cases/case-001/evidence</code> sẽ trả về{' '}
-              <strong>403 Forbidden</strong> cho đến khi Hội đồng Khảo thí ký đủ <strong>2/3 Quorum</strong> cấp quyền{' '}
+              The server and SQLite database only store opaque ciphertext. Calling{' '}
+              <code>GET /api/cases/case-001/evidence</code> returns <strong>403 Forbidden</strong> until at least{' '}
+              <strong>2 of 3 Examination Board Members</strong> approve the QEA Change Request for{' '}
               <code>{DECRYPT_ROLE}</code>.
             </p>
 
@@ -611,27 +611,27 @@ export default function HomePage() {
               onClick={() => void openEvidence()}
               disabled={!caseRecord?.sealed || busy || loading}
             >
-              {busy ? 'Đang kiểm tra quyền & giải mã…' : '🔑 Giải Mã Điểm Thi (Client-side Decrypt)'}
+              {busy ? 'Verifying Role & Decrypting…' : '🔑 Decrypt Exam Grade (Client-Side Decrypt)'}
             </button>
 
             {plaintext ? (
               <div className="data-box revealed">
-                <label>🎉 BẢNG ĐIỂM ĐÃ ĐƯỢC GIẢI MÃ THÀNH CÔNG TRÊN TRÌNH DUYỆT:</label>
+                <label>🎉 DECRYPTED PLAINTEXT GRADE RECORD (BROWSER ONLY):</label>
                 <pre>{plaintext}</pre>
               </div>
             ) : ciphertext ? (
               <div className="data-box">
-                <label>CIPHERTEXT ĐANG LƯU TRONG SQLITE (ZERO-KNOWLEDGE SERVER):</label>
+                <label>OPAQUE CIPHERTEXT STORED IN SQLITE (ZERO-KNOWLEDGE SERVER):</label>
                 <code>{ciphertext.slice(0, 160)}…</code>
               </div>
             ) : null}
 
             <div className="action-block">
-              <h3>Đơn Xin Phúc Khảo / Mở Khóa Điểm Thi:</h3>
+              <h3>Submit Grade Review / Unseal Request:</h3>
               <textarea
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
-                placeholder="Nhập lý do xin phúc khảo gửi Hội đồng Khảo thí..."
+                placeholder="State the academic reason for requesting Examination Board quorum review..."
                 rows={3}
                 disabled={busy}
               />
@@ -640,24 +640,24 @@ export default function HomePage() {
                 onClick={() => void requestAccess()}
                 disabled={!caseRecord?.sealed || busy || loading}
               >
-                📝 Gửi Đơn Phúc Khảo Lên Hội Đồng Khảo Thí
+                📝 Submit Appeal Request to Examination Board
               </button>
             </div>
 
             <div className="role-line">
-              <span>QUYỀN GIẢI MÃ HIỆN TẠI (GOVERNED BY TIDE QEA)</span>
+              <span>REQUIRED TIDE DECRYPTION ROLE (GOVERNED BY QEA QUORUM)</span>
               <code>{DECRYPT_ROLE}</code>
               <span className="hint">
                 {canDecrypt
-                  ? '✔ QEA Quorum (2/3) đã Commit! Tài khoản đã nhận được role _tide_case001.selfdecrypt.'
-                  : `✖ Đang bị khóa mật mã (${qeaState?.approvals.length || 0}/2 chữ ký). Chuyển sang Tab 2 để Hội đồng ký duyệt Quorum 2/3!`}
+                  ? '✔ QEA Quorum (2/3) Committed! Session holds _tide_case001.selfdecrypt.'
+                  : `✖ Cryptographically Locked (${qeaState?.approvals.length || 0}/2 approvals). Go to Tab 2 for 2/3 Board Quorum approval!`}
               </span>
             </div>
           </section>
         </div>
       )}
 
-      {/* TAB 2: Hội đồng Khảo thí & Quorum */}
+      {/* TAB 2: Examination Board & QEA Quorum */}
       {activeTab === 'quorum' && (
         <section className="panel request-panel">
           <div className="request-grid">
@@ -670,11 +670,11 @@ export default function HomePage() {
                     : `⏳ PENDING (${qeaState?.approvals.length || 0}/${qeaState?.threshold || 2})`}
                 </span>
               </div>
-              <h2>Hội Đồng Khảo Thí Ký Duyệt Đa Bên (2/3 Quorum)</h2>
+              <h2>2-of-3 Examination Board Governance</h2>
               <p className="muted">
-                Một quản trị viên đơn lẻ (Admin A) <strong>không thể tự ý mở khóa hay sửa điểm</strong> (1/2 chữ ký vẫn giữ trạng thái{' '}
-                <code>PENDING</code> và API vẫn trả về <code>403 Forbidden</code>). Bắt buộc phải có ít nhất{' '}
-                <strong>2 trong 3 thành viên Hội đồng độc lập</strong> ký duyệt.
+                No single administrator (Admin A alone) can unilaterally unlock or modify a sealed grade record. With
+                only <code>1/2</code> approval, the Change Request remains <code>PENDING</code> and the API enforces{' '}
+                <code>403 Forbidden</code>. At least <strong>2 of 3 independent Board Members</strong> must sign.
               </p>
 
               {/* Live QEA Change Request Card */}
@@ -698,11 +698,11 @@ export default function HomePage() {
                 {/* Signatures List */}
                 <div style={{ marginTop: '14px', borderTop: '1px solid #2d4149', paddingTop: '12px' }}>
                   <div className="eyebrow" style={{ marginBottom: '8px' }}>
-                    CHỮ KÝ MẬT MÃ HỘI ĐỒNG ({qeaState?.approvals.length || 0}/2 REQUIRED):
+                    VERIFIED ENCLAVE SIGNATURES ({qeaState?.approvals.length || 0}/2 REQUIRED):
                   </div>
                   {qeaState?.approvals.length === 0 ? (
                     <p className="muted small" style={{ margin: 0 }}>
-                      Chưa có thành viên Hội đồng nào ký duyệt (0/2).
+                      No Board Member signatures recorded yet (0/2).
                     </p>
                   ) : (
                     qeaState?.approvals.map((app, i) => (
@@ -718,10 +718,10 @@ export default function HomePage() {
                         }}
                       >
                         <strong style={{ color: 'var(--green)' }}>
-                          ✔ Chữ ký #{i + 1}: {app.admin_name}
+                          ✔ Signature #{i + 1}: {app.admin_name}
                         </strong>
                         <div style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--muted)' }}>
-                          VVK Sig: {app.signature_preview}…
+                          VVK Proof: {app.signature_preview}…
                         </div>
                       </div>
                     ))
@@ -730,28 +730,28 @@ export default function HomePage() {
 
                 {/* Action buttons for 3 admins */}
                 <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div className="eyebrow">KÝ DUYỆT TRỰC TIẾP QUA TIDE ENCLAVE (CHỌN ỦY VIÊN):</div>
+                  <div className="eyebrow">AUTHORIZE VIA TIDE ENCLAVE (SELECT BOARD MEMBER):</div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       className="primary"
                       disabled={busy}
                       onClick={() => void signQeaApproval('admin-a')}
                     >
-                      ✍️ 1. Admin A Ký Duyệt (1/2 Pending)
+                      ✍️ 1. Sign as Admin A (1/2 Pending)
                     </button>
                     <button
                       className="primary"
                       disabled={busy}
                       onClick={() => void signQeaApproval('reviewer-b')}
                     >
-                      ✍️ 2. Reviewer B Ký Duyệt (2/2 Commit!)
+                      ✍️ 2. Sign as Reviewer B (2/2 Auto-Commit!)
                     </button>
                     <button
                       className="secondary"
                       disabled={busy}
                       onClick={() => void signQeaApproval('reviewer-c')}
                     >
-                      ✍️ 3. Reviewer C Ký Dự Phòng
+                      ✍️ 3. Sign as Reviewer C (Reserve)
                     </button>
                   </div>
                 </div>
@@ -765,7 +765,7 @@ export default function HomePage() {
                     setActiveTab('portal')
                   }}
                 >
-                  🎓 Quay lại Cổng Sinh Viên (custodian-demo) để Thử Giải Mã →
+                  🎓 Return to Student Portal (custodian-demo) to Test Decryption →
                 </button>
                 <a
                   className="text-button"
@@ -774,21 +774,21 @@ export default function HomePage() {
                   rel="noopener noreferrer"
                   style={{ textDecoration: 'underline', color: 'var(--muted)' }}
                 >
-                  Mở Tide Console gốc (localhost:8080) ↗
+                  Open External Tide Console (localhost:8080) ↗
                 </a>
               </div>
             </div>
 
             <div>
               <div className="panel-head">
-                <span>DANH SÁCH ĐƠN PHÚC KHẢO</span>
-                <span className="status ok">{requests.length} Yêu Cầu</span>
+                <span>GRADE APPEAL REQUESTS</span>
+                <span className="status ok">{requests.length} Logged</span>
               </div>
-              <h2>Lịch Sử Yêu Cầu Mở Khóa</h2>
+              <h2>Submitted Audit Trail</h2>
 
               <div className="request-list">
                 {requests.length === 0 ? (
-                  <p className="muted">Chưa có đơn phúc khảo nào được ghi nhận.</p>
+                  <p className="muted">No grade appeal requests submitted yet.</p>
                 ) : (
                   requests.map((item) => (
                     <div key={item.id} className="request-row">
@@ -806,51 +806,53 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* TAB 3: Giả lập Tấn Công (Live Hack Proof) */}
+      {/* TAB 3: Live Attack Sandbox */}
       {activeTab === 'auditor' && (
         <section className="panel request-panel">
           <div className="panel-head">
             <span>LIVE AUDITOR ATTACK SANDBOX</span>
-            <span className="status locked">CHẾ ĐỘ THỬ THÁCH HACKER</span>
+            <span className="status locked">RED-TEAM VERIFICATION</span>
           </div>
-          <h2>Chứng Minh Tính Bất Khả Xâm Phạm Trước Ban Giám Khảo</h2>
+          <h2>Zero-Knowledge DB Inspection & Tamper Resistance</h2>
           <p className="muted">
-            Trực tiếp thực hiện các kịch bản tấn công nguy hiểm nhất và quan sát cách hệ thống TideGrade bảo vệ dữ liệu học vụ:
+            Simulate insider DBA inspection or malicious SQL injection tampering directly against the SQLite database to
+            verify how TideGrade protects academic records:
           </p>
 
           <div style={{ display: 'flex', gap: '12px', margin: '20px 0', flexWrap: 'wrap' }}>
             <button className="secondary" onClick={() => void fetchRawDb()} disabled={busy}>
-              🔍 1. Soi Trực Tiếp Database SQLite (DBA View)
+              🔍 1. Inspect Raw SQLite Database (DBA View)
             </button>
             <button className="warning-btn" onClick={() => void tamperDb()} disabled={!caseRecord?.sealed || busy}>
-              ⚡ 2. Giả Lập Hacker Đột Nhập Sửa Điểm Trong Database
+              ⚡ 2. Simulate Hacker Tampering Ciphertext in SQLite
             </button>
             <button className="danger-btn" onClick={() => void resetDemo()} disabled={busy}>
-              🔄 3. Làm Mới Bảng Điểm & Quorum (Reset Demo)
+              🔄 3. Reset Grade Record & Quorum (Start Fresh)
             </button>
           </div>
 
           {rawDb && (
             <div className="auditor-box">
-              <h4>Dữ Liệu Thô Đang Lưu Trữ Tại SQLite (`app-data/gateway.sqlite`):</h4>
+              <h4>Raw SQLite Table Contents (`app-data/gateway.sqlite`):</h4>
               <p className="muted small">
-                Máy chủ, IT Admin và DBA chỉ nhìn thấy chuỗi Ciphertext mã hóa sau đây, hoàn toàn không biết điểm số là bao nhiêu:
+                The application server, cloud host, and DBA only see opaque ciphertext — zero plaintext grades or keys
+                ever touch the server:
               </p>
               <table className="raw-table">
                 <thead>
                   <tr>
-                    <th>Mã Kỳ Thi</th>
-                    <th>Người Niêm Phong</th>
-                    <th>Dữ Liệu Mã Hóa (Ciphertext Preview)</th>
-                    <th>Kích Thước</th>
-                    <th>Thời Gian</th>
+                    <th>Case ID</th>
+                    <th>Custodian VUID</th>
+                    <th>Stored Ciphertext Preview (Opaque E2EE Blob)</th>
+                    <th>Size</th>
+                    <th>Timestamp</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rawDb.evidence.length === 0 ? (
                     <tr>
                       <td colSpan={5} style={{ textAlign: 'center', color: '#9eb0ae' }}>
-                        Chưa có bản ghi điểm thi nào được lưu.
+                        No sealed grade records currently stored in SQLite.
                       </td>
                     </tr>
                   ) : (
@@ -872,7 +874,7 @@ export default function HomePage() {
       )}
 
       <footer>
-        ◈ TIDEGRADE · RMIT HACKATHON 2026 · Xây dựng trên nền tảng Tide Protocol & TideCloak Next.js SDK.
+        ◈ TIDEGRADE · RMIT HACKATHON 2026 · Built with Tide Protocol E2EE, QEA Quorum Governance & TideCloak Next.js SDK.
       </footer>
     </div>
   )

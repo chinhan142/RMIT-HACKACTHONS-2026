@@ -98,13 +98,19 @@ function database(): DatabaseSync {
   
   db.prepare(`INSERT OR IGNORE INTO cases (id, title, summary, source, student_id, student_name, course_code) VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
     'case-001',
-    'Bảng Điểm Thi Cuối Kỳ — COSC2759 Distributed Systems & Security',
-    'Hồ sơ điểm thi sinh viên RMIT s3912345 (Hoang Nguyen) được niêm phong mật mã E2EE bằng Tide Protocol. Ngăn chặn triệt để mọi hành vi xem lén hoặc sửa điểm từ Hacker, DBA và Admin đơn lẻ.',
-    'Phòng Khảo thí & Đảm bảo Chất lượng Đào tạo RMIT',
+    'Final Exam Grade Record — COSC2759 Distributed Systems & Security',
+    'Official RMIT exam grade record for student s3912345 (Hoang Nguyen), cryptographically sealed via Tide Protocol E2EE. Protected against unauthorized reads or tampering by hackers, DBAs, or rogue single admins.',
+    'RMIT Examination & Academic Integrity Board',
     's3912345',
     'Hoang Nguyen',
     'COSC2759',
   )
+
+  db.prepare(`UPDATE cases SET 
+    title = 'Final Exam Grade Record — COSC2759 Distributed Systems & Security',
+    summary = 'Official RMIT exam grade record for student s3912345 (Hoang Nguyen), cryptographically sealed via Tide Protocol E2EE. Protected against unauthorized reads or tampering by hackers, DBAs, or rogue single admins.',
+    source = 'RMIT Examination & Academic Integrity Board'
+    WHERE id = 'case-001'`).run()
 
   connection = db
   return db
@@ -176,7 +182,7 @@ export function approveQeaChangeRequest(
 export function tamperEvidence(caseId: string): { original: string; tampered: string } {
   const db = database()
   const ev = getEvidence(caseId)
-  if (!ev) throw new Error('No evidence to tamper')
+  if (!ev) throw new Error('No sealed grade evidence found to tamper with')
   const original = ev.ciphertext
   const tampered = original.length > 30 
     ? original.substring(0, 15) + 'BAD_TAMPERED_PAYLOAD_HACKER_ATTEMPT' + original.substring(50)

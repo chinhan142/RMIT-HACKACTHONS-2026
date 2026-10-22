@@ -11,13 +11,13 @@ export async function GET(request: NextRequest, context: Context) {
   const { id } = await context.params
   if (!getCase(id)) return NextResponse.json({ error: 'Unknown case / exam' }, { status: 404 })
   const evidence = getEvidence(id)
-  if (!evidence) return NextResponse.json({ error: 'Bảng điểm chưa được niêm phong (Grade evidence not sealed yet)' }, { status: 404 })
+  if (!evidence) return NextResponse.json({ error: 'Grade evidence has not been sealed yet' }, { status: 404 })
   const decryptRole = `_tide_${id.replaceAll('-', '')}.selfdecrypt`
   if (!hasRole(auth.principal, decryptRole)) {
     const qea = getQeaState(id)
     return NextResponse.json(
       {
-        error: `Từ chối truy cập (403 Forbidden): Tài khoản thiếu quyền '${decryptRole}'. Trạng thái QEA Quorum hiện tại: ${qea.approvals.length}/${qea.threshold} (${qea.status}). Cần đủ ít nhất 2/3 thành viên Hội đồng phê duyệt!`,
+        error: `Access Denied (403 Forbidden): Missing role '${decryptRole}'. Current QEA Quorum status: ${qea.approvals.length}/${qea.threshold} (${qea.status}). At least 2 of 3 Examination Board Members must authorize this request!`,
       },
       { status: 403 }
     )
@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest, context: Context) {
   if (!hasRole(auth.principal, `_tide_${id.replaceAll('-', '')}.selfencrypt`)) {
     return NextResponse.json({ error: 'Tide encrypt role (_tide_case001.selfencrypt) required to seal grade' }, { status: 403 })
   }
-  if (getEvidence(id)) return NextResponse.json({ error: 'Already sealed' }, { status: 409 })
+  if (getEvidence(id)) return NextResponse.json({ error: 'Grade record is already sealed' }, { status: 409 })
   let body: unknown
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
   const ciphertext = body && typeof body === 'object' ? (body as Record<string, unknown>).ciphertext : undefined
