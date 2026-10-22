@@ -9,6 +9,32 @@
 ![Tide UNLOCKED](https://img.shields.io/badge/Challenge%202-Tide%20UNLOCKED-9dcdaa)
 ![Next.js](https://img.shields.io/badge/Next.js-16%20App%20Router-black)
 ![Security](https://img.shields.io/badge/Cryptography-Client--Side%20E2EE%20%2B%20DPoP%20%2B%20QEA%20(2%2F3)-2ea44f)
+[![Demo Video](https://img.shields.io/badge/%E2%96%B6%EF%B8%8F%20Watch%20Demo%20Video-public%2Fdemo.mp4-e11d48)](./public/demo.mp4)
+
+---
+
+## 🎬 Official End-to-End Demo Video
+
+> [!IMPORTANT]
+> **Watch the full live walkthrough (`01:14`) directly from this repository:**  
+> ### 👉 [**▶️ Watch / Download Full Demo Video (`public/demo.mp4`)**](./public/demo.mp4)
+> *(Demonstrates Live TideCloak ORK OIDC + DPoP Authentication, Client-Side E2EE Grade Sealing, Zero-Knowledge `403` Enforcement, 2-of-3 Multi-Admin QEA Quorum Approval, and Browser-Only Grade Decryption.)*
+
+<div align="center">
+  <video src="./public/demo.mp4" controls width="100%" muted playsinline>
+    <a href="./public/demo.mp4">▶️ Click here to watch the TideGrade End-to-End Demo Video (public/demo.mp4)</a>
+  </video>
+</div>
+
+### ⏱️ Video Walkthrough & Key Timestamps
+
+| Timestamp | Stage | Cryptographic & Governance Verification Shown |
+| :--- | :--- | :--- |
+| **`00:01 – 00:20`** | **1. Live TideCloak ORK Sign-In (OIDC + DPoP)** | Authenticates via the live TideCloak ORK enclave (`ork1.tideprotocol.com`), binds the session to a browser-held DPoP keypair, and initializes the Tide Secure Web Enclave. |
+| **`00:21 – 00:39`** | **2. Client-Side Hermetic E2EE Grade Sealing** | Lecturer (`custodian-demo`) seals the `COSC2769 — Distributed Systems` exam record (`s3912345 · Hoang Nguyen`) in the browser using `_tide_case001.selfencrypt`. Only opaque ciphertext (`TIDE_E2EE_V1:...`) is persisted in SQLite (`SEALED (E2EE)`). |
+| **`00:40 – 00:52`** | **3. Zero-Knowledge Denial (`403`) & Appeal** | Attempting to decrypt while QEA Quorum is `0/2 LOCKED` fails closed with `403 Forbidden (Missing role _tide_case001.selfdecrypt)`. A formal grade review appeal is logged to the Examination Board audit trail. |
+| **`00:53 – 01:04`** | **4. 2-of-3 Exam Board QEA Quorum Approval** | On Tab 2 (*Exam Board QEA Quorum*), **Admin A** signs Change Request `cr-qea-case001-selfdecrypt` (`1/2 Pending` — single admin cannot unlock). **Reviewer B (Dean of School)** provides the 2nd independent signature, reaching `2/2 COMMITTED` quorum. |
+| **`01:05 – 01:13`** | **5. Authorized Browser-Only Decryption** | Returning to Tab 1 (`QUORUM 2/2: UNLOCKED`), the session now holds `_tide_case001.selfdecrypt` and decrypts the verified plaintext transcript (`finalScore: 9.4`, `HD`) strictly inside browser memory. |
 
 ---
 
@@ -119,6 +145,7 @@ All API routes are protected by server-side authentication and role verification
 ├── init/
 │   └── realm.json                             # TideCloak realm initialization template (nextjs-test)
 ├── public/
+│   ├── demo.mp4                               # Official end-to-end walkthrough video (OIDC, E2EE, 2-of-3 QEA)
 │   ├── silent-check-sso.html                  # OIDC silent token refresh iframe asset
 │   └── tide_dpop_auth.html                    # Tide DPoP enclave authentication relay asset
 └── tidecloak.json                             # Exported TideCloak adapter configuration (EdDSA VVK JWKS)
